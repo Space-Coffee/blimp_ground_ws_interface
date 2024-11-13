@@ -13,8 +13,16 @@ pub struct VisInterest {
     servos: bool,
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct Controls {
+    pub throttle: i32,
+    pub pitch: i32,
+    pub roll: i32,
+}
+
 // Visualization to ground
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub enum MessageV2G {
     DeclareInterest(VisInterest),
+    Controls(Controls),
 }

@@ -13,6 +13,15 @@ pub struct VisInterest {
     servos: bool,
 }
 
+impl VisInterest {
+    pub fn new() -> Self {
+        Self {
+            motors: false,
+            servos: false,
+        }
+    }
+}
+
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Controls {
     pub throttle: i32,

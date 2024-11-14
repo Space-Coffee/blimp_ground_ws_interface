@@ -9,8 +9,8 @@ pub enum MessageG2V {
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct VisInterest {
-    motors: bool,
-    servos: bool,
+    pub motors: bool,
+    pub servos: bool,
 }
 
 impl VisInterest {

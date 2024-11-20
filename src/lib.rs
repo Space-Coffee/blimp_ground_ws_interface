@@ -25,8 +25,8 @@ impl VisInterest {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Controls {
     pub throttle: i32,
-    pub pitch: i32,
-    pub roll: i32,
+    pub elevation: i32,
+    pub yaw: i32,
 }
 
 // Visualization to ground

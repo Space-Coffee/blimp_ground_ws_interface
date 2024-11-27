@@ -8,12 +8,12 @@ pub enum MessageG2V {
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct VisInterest {
+pub struct VizInterest {
     pub motors: bool,
     pub servos: bool,
 }
 
-impl VisInterest {
+impl VizInterest {
     pub fn new() -> Self {
         Self {
             motors: false,
@@ -32,6 +32,6 @@ pub struct Controls {
 // Visualization to ground
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub enum MessageV2G {
-    DeclareInterest(VisInterest),
+    DeclareInterest(VizInterest),
     Controls(Controls),
 }

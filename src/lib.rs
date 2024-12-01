@@ -11,6 +11,7 @@ pub enum MessageG2V {
 pub struct VizInterest {
     pub motors: bool,
     pub servos: bool,
+    pub sensors: bool,
 }
 
 impl VizInterest {
@@ -18,6 +19,7 @@ impl VizInterest {
         Self {
             motors: false,
             servos: false,
+            sensors: false,
         }
     }
 }

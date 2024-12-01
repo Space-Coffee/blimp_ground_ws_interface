@@ -5,6 +5,7 @@ use serde;
 pub enum MessageG2V {
     MotorSpeed { id: u8, speed: i32 },
     ServoPosition { id: u8, angle: i16 },
+    SensorData { id: String, data: f64 },
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]

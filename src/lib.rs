@@ -1,6 +1,6 @@
 use serde;
 
-// Ground to visualization
+/// Messages sent by the server
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub enum MessageG2V {
     MotorSpeed { id: u8, speed: i32 },
@@ -8,6 +8,14 @@ pub enum MessageG2V {
     SensorData { id: String, data: f64 },
 }
 
+/// Messages sent by the client
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub enum MessageV2G {
+    DeclareInterest(VizInterest),
+    Controls(Controls),
+}
+
+/// Values subscribed by the visualization software
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct VizInterest {
     pub motors: bool,
@@ -25,16 +33,10 @@ impl VizInterest {
     }
 }
 
+/// Values for controlling the blimp
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Controls {
     pub throttle: i32,
     pub elevation: i32,
     pub yaw: i32,
-}
-
-// Visualization to ground
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub enum MessageV2G {
-    DeclareInterest(VizInterest),
-    Controls(Controls),
 }

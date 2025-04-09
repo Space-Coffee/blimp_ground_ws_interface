@@ -4,4 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+futures-util = "0.3.31"
 serde = { version = "1.0.215", features = ["default", "serde_derive"] }
+tokio = { version = "1.44.2", features = ["full"] }
+tokio-tungstenite = "0.26.2"
+url = "2.5.4"

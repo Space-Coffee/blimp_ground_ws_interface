@@ -1,13 +1,12 @@
 use std::future::IntoFuture;
-use url::Url;
 use blimp_ground_ws_interface::websocket_loop;
-use tokio::sync::oneshot;
-use tokio::task::JoinHandle;
+use tokio::sync::{mpsc, oneshot};
 
 #[tokio::main]
 async fn main() {
     let (shutdown_tx,  shutdown_rx) = oneshot::channel();
-    let mut server = tokio::spawn(websocket_loop("ws://localhost:8080/", shutdown_rx));
+    let (message_tx, message_rx) = mpsc::channel(8);
+    let mut server = tokio::spawn(websocket_loop("ws://localhost:8080/", shutdown_rx, message_rx));
 
 
     let a = tokio::select! {

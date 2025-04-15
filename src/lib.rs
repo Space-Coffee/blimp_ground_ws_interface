@@ -1,4 +1,5 @@
 mod client;
 mod schema;
 
-pub use client::websocket_loop;
+pub use client::BlimpGroundWebsocketClient;
+pub use schema::*;

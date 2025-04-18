@@ -2,16 +2,19 @@ use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio_tungstenite::{tungstenite, MaybeTlsStream, WebSocketStream};
 
-pub struct BlimpGroundWebsocketStreamPair {
-    read_stream: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>,
-    write_stream: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, tungstenite::Message>
+pub struct BlimpGroundWebsocketStreamPair<T>
+{
+    pub read_stream: SplitStream<WebSocketStream<T>>,
+    pub write_stream: SplitSink<WebSocketStream<T>, tungstenite::Message>,
 }
 
-impl BlimpGroundWebsocketStreamPair {
-    pub fn from_stream(stream: WebSocketStream<MaybeTlsStream<TcpStream>>) -> Self {
+impl<T> BlimpGroundWebsocketStreamPair<T>
+where T: AsyncRead + AsyncWrite + Unpin + Send + 'static {
+    pub fn from_stream(stream: WebSocketStream<T>) -> Self {
         let (write_stream, read_stream) = stream.split();
         Self {read_stream, write_stream}
     }
@@ -23,7 +26,7 @@ impl BlimpGroundWebsocketStreamPair {
         Ok(())
     }
 
-    pub async fn recv<R: DeserializeOwned>(&mut self) -> Result<R, Box<dyn std::error::Error>> {
+    pub async fn recv<R: DeserializeOwned>(&mut self) -> Result<R, Box<dyn std::error::Error + Send + Sync>> {
         while let Some(msg) = self.read_stream.next().await {
             match msg {
                 Ok(tungstenite::Message::Binary(data)) => {

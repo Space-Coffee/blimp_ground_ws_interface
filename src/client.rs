@@ -1,11 +1,6 @@
 use std::future::{Future, IntoFuture};
-use std::io::{Bytes, Error};
-use futures_util::stream::{SplitSink, SplitStream};
-use tokio::sync::{broadcast, oneshot};
 use tokio_tungstenite::{connect_async, tungstenite, MaybeTlsStream, WebSocketStream};
-use url::Url;
 use futures_util::{SinkExt, StreamExt};
-use serde::Serialize;
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::handshake::client::Request;
 use crate::MessageG2V;
@@ -14,7 +9,7 @@ use crate::stream::BlimpGroundWebsocketStreamPair;
 
 pub struct BlimpGroundWebsocketClient {
     url: String,
-    stream: Option<BlimpGroundWebsocketStreamPair>,
+    stream: Option<BlimpGroundWebsocketStreamPair<MaybeTlsStream<TcpStream>>>,
 }
 impl BlimpGroundWebsocketClient {
     pub fn new(url: &str) -> Self {
@@ -38,7 +33,7 @@ impl BlimpGroundWebsocketClient {
         self.stream.as_mut().unwrap().send(message).await
     }
 
-    pub async fn recv(&mut self) -> Result<MessageG2V, Box<dyn std::error::Error>> {
+    pub async fn recv(&mut self) -> Result<MessageG2V, Box<dyn std::error::Error + Send + Sync>> {
         self.stream.as_mut().unwrap().recv().await
     }
 }

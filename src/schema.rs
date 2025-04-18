@@ -7,14 +7,14 @@ pub enum MessageG2V {
 }
 
 /// Messages sent by the client
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Copy, Clone)]
 pub enum MessageV2G {
     DeclareInterest(VizInterest),
     Controls(Controls),
 }
 
 /// Values subscribed by the visualization software
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Copy, Clone)]
 pub struct VizInterest {
     pub motors: bool,
     pub servos: bool,
@@ -32,7 +32,7 @@ impl VizInterest {
 }
 
 /// Values for controlling the blimp
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Copy, Clone)]
 pub struct Controls {
     pub throttle: i32,
     pub elevation: i32,

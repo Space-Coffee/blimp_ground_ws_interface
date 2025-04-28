@@ -25,23 +25,8 @@ impl BlimpGroundWebsocketServer {
         self.listener = None;
     }
 
-    async fn handle_connection<F, Fut>(mut connection: BlimpGroundWebsocketStreamPair<TcpStream>, handler: F) -> ()
-    where F: Fn(MessageV2G) -> Fut, Fut: Future<Output=()> + Send {
-        println!("connected");
-        loop {
-            match connection.recv::<MessageV2G>().await {
-                Ok(data) => {
-                    handler(data).await;
-                }
-                Err(error) => break
-            };
-        }
-        println!("disconnected")
-
-    }
-
     pub async fn run<F, Fut>(&mut self, handler: F) -> Result<(), Box<dyn std::error::Error + Send + Sync>>
-    where F: Fn(MessageV2G) -> Fut + Sync + Send + 'static, Fut: Future<Output=()> + Send {
+    where F: Fn(BlimpGroundWebsocketStreamPair<TcpStream>) -> Fut + Sync + Send + 'static, Fut: Future<Output=()> + Send {
         let owned_handler = Arc::new(handler);
         loop {
             let (tcp_stream, address) = self.listener.as_mut().expect("Socket hasn't been bound").accept().await?;
@@ -51,7 +36,7 @@ impl BlimpGroundWebsocketServer {
             let mut pair = BlimpGroundWebsocketStreamPair::from_stream(websocket_stream);
             let handler= Arc::clone(&owned_handler);
             tokio::spawn(async move {
-                Self::handle_connection(pair, move |message| handler(message)).await;
+                handler(pair).await;
             });
         }
     }

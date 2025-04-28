@@ -1,9 +1,13 @@
 use std::future::IntoFuture;
-use blimp_ground_ws_interface::{BlimpGroundWebsocketClient, BlimpGroundWebsocketServer, Controls};
-use blimp_ground_ws_interface::MessageV2G;
+use std::time::Duration;
+use tokio::net::TcpStream;
+use tokio::time::sleep;
+use blimp_ground_ws_interface::{BlimpGroundWebsocketClient, BlimpGroundWebsocketServer, BlimpGroundWebsocketStreamPair, Controls};
 
-async fn handler(message: MessageV2G) {
-    println!("{:?}", message)
+async fn handler(pair: BlimpGroundWebsocketStreamPair<TcpStream>) {
+    println!("connected");
+    sleep(Duration::from_millis(5000)).await;
+    println!("disconnecting")
 }
 #[tokio::main]
 async fn main() {

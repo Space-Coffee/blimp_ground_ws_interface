@@ -5,4 +5,5 @@ mod server;
 
 pub use client::BlimpGroundWebsocketClient;
 pub use server::BlimpGroundWebsocketServer;
+pub use stream::BlimpGroundWebsocketStreamPair;
 pub use schema::*;

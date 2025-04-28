@@ -14,9 +14,10 @@ async fn test_client_send() {
         tokio::spawn(async move {
             let mut server = BlimpGroundWebsocketServer::new("localhost:9999");
             server.bind().await.expect("Failed address bind");
-            server.run(move |message| {
+            server.run(move |mut pair| {
                 let tx = tx.clone();
                 async move {
+                    let message= pair.recv::<MessageV2G>().await.expect("Failed receiving client message");
                     tx.lock().await.take().expect("Tx already taken").send(message).expect("Failed to send");
                 }
             }).await.expect("Server failed");
@@ -35,3 +36,4 @@ async fn test_client_send() {
 
     assert_eq!(sent, received);
 }
+

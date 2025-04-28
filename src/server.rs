@@ -1,4 +1,5 @@
 use std::future::Future;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::accept_async;
@@ -15,6 +16,9 @@ impl BlimpGroundWebsocketServer {
         Self {url: url.to_string(), listener: None}
     }
 
+    pub fn get_address(&self) -> Result<SocketAddr, Box<dyn std::error::Error>> {
+        Ok(self.listener.as_ref().ok_or("aa")?.local_addr()?)
+    }
     pub async fn bind(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let listener = TcpListener::bind(self.url.clone()).await?;
         self.listener = Some(listener);

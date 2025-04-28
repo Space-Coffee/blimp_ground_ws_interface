@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use std::sync::Arc;
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::{Mutex, oneshot};
@@ -9,12 +10,15 @@ const CLIENT_MESSAGE: MessageV2G = MessageV2G::DeclareInterest(VizInterest { mot
 async fn test_client_send() {
     let (tx, rx) = oneshot::channel();
     let tx = Arc::new(Mutex::new(Some(tx)));
+    
+    let (address_tx, address_rx) = oneshot::channel::<SocketAddr>();
 
     let server = {
         let tx = tx.clone();
         tokio::spawn(async move {
-            let mut server = BlimpGroundWebsocketServer::new("localhost:9999");
+            let mut server = BlimpGroundWebsocketServer::new("localhost:0");
             server.bind().await.expect("Failed address bind");
+            address_tx.send(server.get_address().unwrap()).expect("Did not send the address properly");
             server.run(move |mut pair| {
                 let tx = tx.clone();
                 async move {
@@ -24,8 +28,9 @@ async fn test_client_send() {
             }).await.expect("Server failed");
         })
     };
-
-    let mut client = BlimpGroundWebsocketClient::new("ws://localhost:9999/");
+    
+    let address = address_rx.await.expect("Failed to receive target address");
+    let mut client = BlimpGroundWebsocketClient::new(format!("ws://{}", address).as_str());
 
     client.connect().await.expect("Failed to connect the client");
     client.send(CLIENT_MESSAGE).await.expect("Failed to send the client message");
@@ -40,10 +45,12 @@ async fn test_client_send() {
 const SERVER_MESSAGE: MessageG2V = MessageG2V::MotorSpeed { id: 0, speed: 0 };
 #[tokio::test]
 async fn test_server_send() {
+    let (address_tx, address_rx) = oneshot::channel::<SocketAddr>();
     let server = {
         tokio::spawn(async move {
-            let mut server = BlimpGroundWebsocketServer::new("localhost:9998");
+            let mut server = BlimpGroundWebsocketServer::new("localhost:0");
             server.bind().await.expect("Failed address bind");
+            address_tx.send(server.get_address().unwrap()).expect("Did not send the address properly");
             server.run(|mut pair| {
                 async move {
                     pair.send(SERVER_MESSAGE).await.expect("Failed to send server message");
@@ -52,8 +59,9 @@ async fn test_server_send() {
             }).await.expect("Server failed");
         })
     };
-
-    let mut client = BlimpGroundWebsocketClient::new("ws://localhost:9998/");
+    
+    let address = address_rx.await.expect("Failed to receive target address");
+    let mut client = BlimpGroundWebsocketClient::new(format!("ws://{}", address).as_str());
 
     client.connect().await.expect("Failed to connect the client");
 

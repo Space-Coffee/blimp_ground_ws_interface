@@ -1,11 +1,9 @@
-use std::future::{Future, IntoFuture};
-use tokio_tungstenite::{connect_async, tungstenite, MaybeTlsStream, WebSocketStream};
-use futures_util::{SinkExt, StreamExt};
-use tokio::net::TcpStream;
-use tokio_tungstenite::tungstenite::handshake::client::Request;
-use crate::MessageG2V;
 use crate::schema::MessageV2G;
 use crate::stream::BlimpGroundWebsocketStreamPair;
+use crate::MessageG2V;
+use tokio::net::TcpStream;
+use tokio_tungstenite::tungstenite::handshake::client::Request;
+use tokio_tungstenite::{connect_async, tungstenite, MaybeTlsStream};
 
 pub struct BlimpGroundWebsocketClient {
     url: String,
@@ -20,7 +18,7 @@ impl BlimpGroundWebsocketClient {
     }
     pub async fn connect(&mut self) -> Result<(), tungstenite::Error> {
         let request = self.get_request()?;
-        let (stream, response) = connect_async(request).await?;
+        let (stream, _response) = connect_async(request).await?;
         self.stream = Some(BlimpGroundWebsocketStreamPair::from_stream(stream));
         Ok(())
     }

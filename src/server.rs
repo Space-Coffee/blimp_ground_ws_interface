@@ -3,7 +3,6 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::accept_async;
-use crate::MessageV2G;
 use crate::stream::BlimpGroundWebsocketStreamPair;
 
 pub struct BlimpGroundWebsocketServer {
@@ -33,11 +32,11 @@ impl BlimpGroundWebsocketServer {
     where F: Fn(BlimpGroundWebsocketStreamPair<TcpStream>) -> Fut + Sync + Send + 'static, Fut: Future<Output=()> + Send {
         let owned_handler = Arc::new(handler);
         loop {
-            let (tcp_stream, address) = self.listener.as_mut().expect("Socket hasn't been bound").accept().await?;
+            let (tcp_stream, _address) = self.listener.as_mut().expect("Socket hasn't been bound").accept().await?;
 
             let websocket_stream = accept_async(tcp_stream).await?;
 
-            let mut pair = BlimpGroundWebsocketStreamPair::from_stream(websocket_stream);
+            let pair = BlimpGroundWebsocketStreamPair::from_stream(websocket_stream);
             let handler= Arc::clone(&owned_handler);
             tokio::spawn(async move {
                 handler(pair).await;

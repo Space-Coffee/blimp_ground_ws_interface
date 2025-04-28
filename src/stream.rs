@@ -1,10 +1,9 @@
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
-use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio::net::TcpStream;
-use tokio_tungstenite::{tungstenite, MaybeTlsStream, WebSocketStream};
+use tokio_tungstenite::{tungstenite, WebSocketStream};
 
 pub struct BlimpGroundWebsocketStreamPair<T>
 {

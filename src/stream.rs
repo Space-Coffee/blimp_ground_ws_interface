@@ -8,13 +8,13 @@ use tokio_tungstenite::{tungstenite, MaybeTlsStream, WebSocketStream};
 
 pub struct BlimpGroundWebsocketStreamPair<T>
 {
-    pub read_stream: SplitStream<WebSocketStream<T>>,
-    pub write_stream: SplitSink<WebSocketStream<T>, tungstenite::Message>,
+    read_stream: SplitStream<WebSocketStream<T>>,
+    write_stream: SplitSink<WebSocketStream<T>, tungstenite::Message>,
 }
 
 impl<T> BlimpGroundWebsocketStreamPair<T>
 where T: AsyncRead + AsyncWrite + Unpin + Send + 'static {
-    pub fn from_stream(stream: WebSocketStream<T>) -> Self {
+    pub(crate) fn from_stream(stream: WebSocketStream<T>) -> Self {
         let (write_stream, read_stream) = stream.split();
         Self {read_stream, write_stream}
     }

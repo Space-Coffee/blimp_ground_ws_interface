@@ -1,5 +1,5 @@
 /// Messages sent by the server
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Clone)]
 pub enum MessageG2V {
     MotorSpeed { id: u8, speed: i32 },
     ServoPosition { id: u8, angle: i16 },

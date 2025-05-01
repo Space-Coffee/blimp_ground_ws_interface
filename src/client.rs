@@ -1,9 +1,10 @@
-use crate::schema::MessageV2G;
-use crate::stream::BlimpGroundWebsocketStreamPair;
-use crate::MessageG2V;
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::handshake::client::Request;
 use tokio_tungstenite::{connect_async, tungstenite, MaybeTlsStream};
+
+use crate::schema::MessageV2G;
+use crate::stream::BlimpGroundWebsocketStreamPair;
+use crate::MessageG2V;
 
 pub struct BlimpGroundWebsocketClient {
     url: String,

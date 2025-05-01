@@ -1,10 +1,11 @@
-use blimp_ground_ws_interface::{
-    BlimpGroundWebsocketClient, BlimpGroundWebsocketServer, MessageG2V, MessageV2G, VizInterest,
-};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::{oneshot, Mutex as TMutex};
 use tokio::time::{timeout, Duration};
+
+use blimp_ground_ws_interface::{
+    BlimpGroundWebsocketClient, BlimpGroundWebsocketServer, MessageG2V, MessageV2G, VizInterest,
+};
 
 const CLIENT_MESSAGE: MessageV2G = MessageV2G::DeclareInterest(VizInterest {
     motors: true,

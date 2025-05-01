@@ -30,11 +30,19 @@ impl BlimpGroundWebsocketClient {
         self.stream = None;
         Ok(())
     }
-    pub async fn send(&mut self, message: MessageV2G) -> Result<(), Box<dyn std::error::Error>> {
-        self.stream.as_mut().unwrap().send(message).await
+    pub async fn send(&self, message: MessageV2G) -> Result<(), Box<dyn std::error::Error>> {
+        self.stream
+            .as_ref()
+            .expect("Unconnected client attempted to send")
+            .send(message)
+            .await
     }
 
-    pub async fn recv(&mut self) -> Result<MessageG2V, Box<dyn std::error::Error + Send + Sync>> {
-        self.stream.as_mut().unwrap().recv().await
+    pub async fn recv(&self) -> Result<MessageG2V, Box<dyn std::error::Error + Send + Sync>> {
+        self.stream
+            .as_ref()
+            .expect("Unconnected client attempted to receive")
+            .recv()
+            .await
     }
 }

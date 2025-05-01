@@ -28,7 +28,7 @@ async fn test_client_send() {
                 .send(server.get_address().unwrap())
                 .expect("Did not send the address properly");
             server
-                .run(move |mut pair| {
+                .run(move |pair| {
                     let tx = tx.clone();
                     async move {
                         let message = pair
@@ -82,7 +82,7 @@ async fn test_server_send() {
                 .send(server.get_address().unwrap())
                 .expect("Did not send the address properly");
             server
-                .run(|mut pair| async move {
+                .run(|pair| async move {
                     pair.send(SERVER_MESSAGE)
                         .await
                         .expect("Failed to send server message");

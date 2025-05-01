@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::sync::{oneshot, Mutex as TMutex};
+use tokio::sync::{oneshot, Mutex as TMutex, Notify};
 use tokio::time::{timeout, Duration};
 
 use blimp_ground_ws_interface::{
@@ -109,4 +109,86 @@ async fn test_server_send() {
     server.abort();
 
     assert_eq!(SERVER_MESSAGE, received);
+}
+
+#[tokio::test]
+async fn test_concurrent_sends() {
+    const MSGS_COUNT: usize = 64;
+
+    let (address_tx, address_rx) = oneshot::channel::<SocketAddr>();
+    let server_recv_notify = Arc::new(Notify::new());
+    let client_recv_notify = Arc::new(Notify::new());
+
+    let server = {
+        let server_recv_notify = server_recv_notify.clone();
+        tokio::spawn(async move {
+            let mut server = BlimpGroundWebsocketServer::new("localhost:0");
+            server.bind().await.expect("Failed address bind");
+            address_tx
+                .send(server.get_address().unwrap())
+                .expect("Did not send the address properly");
+            server
+                .run(move |pair| {
+                    let server_recv_notify = server_recv_notify.clone();
+                    async move {
+                        let pair = Arc::new(pair);
+                        let recv_task = {
+                            let pair = pair.clone();
+                            tokio::spawn(async move {
+                                for _i in 0..MSGS_COUNT {
+                                    let msg = pair.recv::<MessageV2G>().await.unwrap();
+                                    assert_eq!(msg, CLIENT_MESSAGE);
+                                }
+                                server_recv_notify.notify_one();
+                            })
+                        };
+
+                        for _i in 0..MSGS_COUNT {
+                            pair.send(SERVER_MESSAGE)
+                                .await
+                                .expect("Failed to send server message");
+                        }
+
+                        recv_task.await.unwrap();
+                    }
+                })
+                .await
+                .expect("Server failed");
+        })
+    };
+
+    let address = address_rx.await.expect("Failed to receive target address");
+    let mut client = BlimpGroundWebsocketClient::new(format!("ws://{}", address).as_str());
+
+    client
+        .connect()
+        .await
+        .expect("Failed to connect the client");
+
+    let client = Arc::new(client);
+    {
+        let client = client.clone();
+        let client_recv_notify = client_recv_notify.clone();
+        tokio::spawn(async move {
+            for _i in 0..MSGS_COUNT {
+                let msg = client.recv().await.unwrap();
+                assert_eq!(msg, SERVER_MESSAGE);
+            }
+            client_recv_notify.notify_one();
+        });
+    }
+
+    for _i in 0..MSGS_COUNT {
+        client
+            .send(CLIENT_MESSAGE)
+            .await
+            .expect("Failed to send the client message");
+    }
+
+    let mut notify_join_set = tokio::task::JoinSet::new();
+    notify_join_set.spawn(async move { server_recv_notify.notified().await });
+    notify_join_set.spawn(async move { client_recv_notify.notified().await });
+    timeout(Duration::from_secs(4), notify_join_set.join_all())
+        .await
+        .expect("Timed out waiting for transmission completion");
 }

@@ -11,7 +11,10 @@ pub struct BlimpGroundWebsocketClient {
 }
 impl BlimpGroundWebsocketClient {
     pub fn new(url: &str) -> Self {
-        Self {url: url.to_string(), stream: None}
+        Self {
+            url: url.to_string(),
+            stream: None,
+        }
     }
     fn get_request(&self) -> Result<Request, tungstenite::Error> {
         tungstenite::client::IntoClientRequest::into_client_request(&self.url)

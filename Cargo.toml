@@ -9,3 +9,4 @@ postcard = { version = "1.0.10", features = ["use-std"] }
 serde = { version = "1.0.215", features = ["default", "serde_derive"] }
 tokio = { version = "1.44.2", features = ["full"] }
 tokio-tungstenite = "0.26.2"
+tungstenite = "0.26.2"

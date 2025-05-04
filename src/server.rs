@@ -1,8 +1,11 @@
 use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
+
 use tokio::net::{TcpListener, TcpStream};
-use tokio_tungstenite::accept_async;
+use tokio::sync::oneshot;
+use tokio_tungstenite::accept_hdr_async;
+use tungstenite;
 
 use crate::stream::BlimpGroundWebsocketStreamPair;
 
@@ -49,7 +52,21 @@ impl BlimpGroundWebsocketServer {
                 .accept()
                 .await?;
 
-            let websocket_stream = accept_async(tcp_stream).await?;
+            let (subprotocol_tx, subprotocol_rx) = oneshot::channel();
+            let hdr_handler =
+                move |req: &tungstenite::handshake::server::Request,
+                      res: tungstenite::handshake::server::Response| {
+                    let headers = req.headers();
+                    let subprotocol_val = headers
+                        .get("Sec-WebSocket-Protocol")
+                        .map(|x| String::from(x.to_str().unwrap()));
+                    subprotocol_tx.send(subprotocol_val).unwrap();
+                    Ok(res)
+                };
+
+            let websocket_stream = accept_hdr_async(tcp_stream, hdr_handler).await?;
+
+            let subprotocol = subprotocol_rx.await?;
 
             let pair = BlimpGroundWebsocketStreamPair::from_stream(websocket_stream);
             let handler = Arc::clone(&owned_handler);

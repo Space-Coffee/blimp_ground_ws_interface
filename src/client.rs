@@ -3,7 +3,7 @@ use tokio_tungstenite::tungstenite::handshake::client::Request;
 use tokio_tungstenite::{connect_async, tungstenite, MaybeTlsStream};
 
 use crate::schema::MessageV2G;
-use crate::stream::BlimpGroundWebsocketStreamPair;
+use crate::stream::{BlimpGroundWebsocketStreamPair, BlimpSubprotocol};
 use crate::MessageG2V;
 
 pub struct BlimpGroundWebsocketClient {
@@ -23,7 +23,7 @@ impl BlimpGroundWebsocketClient {
     pub async fn connect(&mut self) -> Result<(), tungstenite::Error> {
         let request = self.get_request()?;
         let (stream, _response) = connect_async(request).await?;
-        self.stream = Some(BlimpGroundWebsocketStreamPair::from_stream(stream));
+        self.stream = Some(BlimpGroundWebsocketStreamPair::from_stream(stream, BlimpSubprotocol::PostcardV1));
         Ok(())
     }
     pub async fn disconnect(&mut self) -> Result<(), tungstenite::Error> {

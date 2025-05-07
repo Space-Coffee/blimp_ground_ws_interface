@@ -1,25 +1,42 @@
+use std::cmp::PartialEq;
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
+use phf::phf_map;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::RwLock as TRwLock;
 use tokio_tungstenite::{tungstenite, WebSocketStream};
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum BlimpSubprotocol {
+    JsonV1,
+    PostcardV1,
+}
+
+pub static ALLOWED_PROTOCOLS: phf::Map<&'static str, BlimpSubprotocol> = phf_map! {
+    "spacecoffee.blimp.v1.json" => BlimpSubprotocol::JsonV1,
+    "spacecoffee.blimp.v1.postcard" => BlimpSubprotocol::PostcardV1,
+};
 pub struct BlimpGroundWebsocketStreamPair<T> {
     read_stream: TRwLock<SplitStream<WebSocketStream<T>>>,
     write_stream: TRwLock<SplitSink<WebSocketStream<T>, tungstenite::Message>>,
+    subprotocol: BlimpSubprotocol
 }
 
 impl<T> BlimpGroundWebsocketStreamPair<T>
 where
     T: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
-    pub(crate) fn from_stream(stream: WebSocketStream<T>) -> Self {
+    pub(crate) fn from_stream(stream: WebSocketStream<T>, subprotocol: BlimpSubprotocol) -> Self {
         let (write_stream, read_stream) = stream.split();
+        if subprotocol != BlimpSubprotocol::PostcardV1 {
+            unimplemented!("Only Postcard protocol is implemented for now")
+        }
         Self {
             read_stream: TRwLock::new(read_stream),
             write_stream: TRwLock::new(write_stream),
+            subprotocol
         }
     }
     pub async fn send<S: Serialize>(&self, message: S) -> Result<(), Box<dyn std::error::Error>> {

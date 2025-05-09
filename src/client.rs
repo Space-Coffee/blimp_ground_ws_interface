@@ -8,20 +8,22 @@ use crate::MessageG2V;
 use crate::subprotocol::BlimpSubprotocol;
 
 pub struct BlimpGroundWebsocketClient {
-    url: String,
-    stream: Option<BlimpGroundWebsocketStreamPair<MaybeTlsStream<TcpStream>>>,
+    pub url: String,
+    pub subprotocol: BlimpSubprotocol,
+    stream: Option<BlimpGroundWebsocketStreamPair<MaybeTlsStream<TcpStream>>>
 }
 impl BlimpGroundWebsocketClient {
     pub fn new(url: &str) -> Self {
         Self {
             url: url.to_string(),
             stream: None,
+            subprotocol: BlimpSubprotocol::default()
         }
     }
     fn get_request(&self) -> Result<Request, tungstenite::Error> {
         Ok(Request::builder()
             .uri(self.url.as_str())
-            .header("Sec-WebSocket-Protocol", BlimpSubprotocol::default().to_string())
+            .header("Sec-WebSocket-Protocol", self.subprotocol.to_string())
             .header("Host", "")
             .header("Origin", "")
             .header("Connection", "Upgrade")
@@ -34,7 +36,7 @@ impl BlimpGroundWebsocketClient {
     pub async fn connect(&mut self) -> Result<(), tungstenite::Error> {
         let request = self.get_request()?;
         let (stream, _response) = connect_async(request).await?;
-        self.stream = Some(BlimpGroundWebsocketStreamPair::from_stream(stream, BlimpSubprotocol::default()));
+        self.stream = Some(BlimpGroundWebsocketStreamPair::from_stream(stream, self.subprotocol.clone()));
         Ok(())
     }
     pub async fn disconnect(&mut self) -> Result<(), tungstenite::Error> {

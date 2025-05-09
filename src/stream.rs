@@ -19,9 +19,6 @@ where
 {
     pub(crate) fn from_stream(stream: WebSocketStream<T>, subprotocol: BlimpSubprotocol) -> Self {
         let (write_stream, read_stream) = stream.split();
-        if subprotocol.flavour != BlimpSubprotocolFlavour::Postcard {
-            unimplemented!("Only Postcard protocol is implemented for now")
-        }
         Self {
             read_stream: TRwLock::new(read_stream),
             write_stream: TRwLock::new(write_stream),

@@ -19,7 +19,7 @@ pub enum SubprotocolValidationError {
     UnsupportedFlavour
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct BlimpSubprotocol {
     pub version: u16,
     pub flavour: BlimpSubprotocolFlavour
@@ -76,7 +76,8 @@ impl BlimpSubprotocol {
     pub fn export_packet<S: Serialize>(&self, message: S) -> Result<tungstenite::Message, Box<dyn error::Error + Send + Sync>> {
         match self.flavour {
             BlimpSubprotocolFlavour::Json => {
-                todo!();
+                let serialized = serde_json::to_string(&message)?;
+                Ok(tungstenite::Message::Text(serialized.into()))
             }
             BlimpSubprotocolFlavour::Postcard => {
                 let serialized = postcard::to_stdvec(&message)?;
@@ -88,7 +89,11 @@ impl BlimpSubprotocol {
     pub fn import_packet<R: DeserializeOwned>(&self, message: tungstenite::Message) -> Result<R, Box<dyn error::Error + Send + Sync>> {
         match (self.flavour, message) {
             (BlimpSubprotocolFlavour::Json, tungstenite::Message::Text(text)) => {
-                todo!();
+                match serde_json::from_str::<R>(&text) {
+                    Ok(data) => Ok(data),
+                    Err(error) => Err(format!("Failed to deserialize: {}", error).into()),
+                }
+                
             }
             (BlimpSubprotocolFlavour::Postcard, tungstenite::Message::Binary(bytes)) => {
                 match postcard::from_bytes::<R>(&bytes) {

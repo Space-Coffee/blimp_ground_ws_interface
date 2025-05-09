@@ -1,3 +1,7 @@
+pub const PROTOCOL_ORGANIZATION: &str = "spacecoffee";
+pub const PROTOCOL_PROJECT: &str = "blimp";
+pub const PROTOCOL_VERSION: u16 = 1;
+
 /// Messages sent by the server
 #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Clone)]
 pub enum MessageG2V {

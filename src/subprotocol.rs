@@ -1,7 +1,10 @@
+use std::error;
 use crate::{PROTOCOL_ORGANIZATION, PROTOCOL_PROJECT, PROTOCOL_VERSION};
 use phf::phf_map;
 use std::fmt::Display;
 use std::str::FromStr;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BlimpSubprotocolFlavour {
@@ -66,5 +69,36 @@ impl Display for BlimpSubprotocol {
         };
 
         write!(f, "{}", format!("{}.{}.v{}.{}", PROTOCOL_ORGANIZATION, PROTOCOL_PROJECT, self.version, flavour_name))
+    }
+}
+
+impl BlimpSubprotocol {
+    pub fn export_packet<S: Serialize>(&self, message: S) -> Result<tungstenite::Message, Box<dyn error::Error + Send + Sync>> {
+        match self.flavour {
+            BlimpSubprotocolFlavour::Json => {
+                todo!();
+            }
+            BlimpSubprotocolFlavour::Postcard => {
+                let serialized = postcard::to_stdvec(&message)?;
+                Ok(tungstenite::Message::Binary(tungstenite::Bytes::from(serialized)))
+            }
+        }
+    }
+
+    pub fn import_packet<R: DeserializeOwned>(&self, message: tungstenite::Message) -> Result<R, Box<dyn error::Error + Send + Sync>> {
+        match (self.flavour, message) {
+            (BlimpSubprotocolFlavour::Json, tungstenite::Message::Text(text)) => {
+                todo!();
+            }
+            (BlimpSubprotocolFlavour::Postcard, tungstenite::Message::Binary(bytes)) => {
+                match postcard::from_bytes::<R>(&bytes) {
+                    Ok(data) => Ok(data),
+                    Err(error) => Err(format!("Failed to deserialize: {}", error).into()),
+                }
+            }
+            (_, _) => {
+                Err("Received frame doesn't match protocol flavour.".into())
+            }
+        }
     }
 }

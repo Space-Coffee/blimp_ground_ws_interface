@@ -28,14 +28,11 @@ where
             subprotocol
         }
     }
-    pub async fn send<S: Serialize>(&self, message: S) -> Result<(), Box<dyn std::error::Error>> {
-        let serialized = postcard::to_stdvec(&message)?;
+    pub async fn send<S: Serialize>(&self, message: S) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.write_stream
             .write()
             .await
-            .send(tungstenite::Message::Binary(tungstenite::Bytes::from(
-                serialized,
-            )))
+            .send(self.subprotocol.export_packet(message)?)
             .await?;
         Ok(())
     }
@@ -45,14 +42,14 @@ where
     ) -> Result<R, Box<dyn std::error::Error + Send + Sync>> {
         while let Some(msg) = self.read_stream.write().await.next().await {
             match msg {
-                Ok(tungstenite::Message::Binary(data)) => {
-                    return match postcard::from_bytes(&data) {
-                        Ok(data) => Ok(data),
-                        Err(error) => Err(format!("Failed to deserialize: {}", error).into()),
-                    }
-                }
                 Ok(tungstenite::Message::Close(_)) => {
                     return Err("Connection closed by peer".into());
+                }
+                Ok(tungstenite::Message::Binary(data)) => {
+                    return self.subprotocol.import_packet(tungstenite::Message::Binary(data));
+                }
+                Ok(tungstenite::Message::Text(data)) => {
+                    return self.subprotocol.import_packet(tungstenite::Message::Text(data));
                 }
                 Ok(_) => continue,
                 Err(e) => {

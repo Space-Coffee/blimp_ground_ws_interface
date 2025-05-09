@@ -1,15 +1,15 @@
 use std::future::Future;
 use std::net::SocketAddr;
+use std::str::FromStr;
 use std::sync::Arc;
 
+use crate::stream::BlimpGroundWebsocketStreamPair;
+use crate::subprotocol::BlimpSubprotocol;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::oneshot;
 use tokio_tungstenite::accept_hdr_async;
 use tungstenite;
 use tungstenite::http::{HeaderValue, StatusCode};
-use crate::stream::{BlimpGroundWebsocketStreamPair, ALLOWED_PROTOCOLS};
-use phf::phf_map;
-
 
 pub struct BlimpGroundWebsocketServer {
     url: String,
@@ -37,16 +37,18 @@ impl BlimpGroundWebsocketServer {
         self.listener = None;
     }
 
-    fn get_subprotocol(request: &tungstenite::handshake::server::Request) -> Option<&str> {
+    fn get_subprotocol(request: &tungstenite::handshake::server::Request) -> Option<BlimpSubprotocol> {
         let subprotocols: Option<Vec<&str>> = request.headers()
             .get("Sec-WebSocket-Protocol")
             .and_then(|value| value.to_str().ok())
             .map(|s| s.split(',').map(str::trim).collect());
-
-        subprotocols
-            .as_ref()
-            .and_then(|protos| protos.iter().find(|p| ALLOWED_PROTOCOLS.contains_key(**p)))
-            .copied()
+        
+        for subprotocol_name in subprotocols? {
+            if let Ok(subprotocol) = BlimpSubprotocol::from_str(subprotocol_name) {
+                return Some(subprotocol)
+            }
+        }
+        None
     }
     pub async fn run<F, Fut>(
         &mut self,
@@ -75,8 +77,8 @@ impl BlimpGroundWebsocketServer {
                             Err(tungstenite::handshake::server::Response::builder().status(StatusCode::BAD_REQUEST).body(Some("No provided valid subprotocols".to_string())).unwrap())
                         }
                         Some(protocol) => {
-                            subprotocol_tx.send(protocol.to_string()).unwrap();
-                            res.headers_mut().insert("Sec-WebSocket-Protocol", HeaderValue::from_str(protocol).unwrap());
+                            res.headers_mut().insert("Sec-WebSocket-Protocol", HeaderValue::from_str(protocol.to_string().as_str()).unwrap());
+                            subprotocol_tx.send(protocol).unwrap();
                             Ok(res)
                         }
                     }
@@ -84,9 +86,9 @@ impl BlimpGroundWebsocketServer {
 
             let websocket_stream = accept_hdr_async(tcp_stream, hdr_handler).await?;
 
-            let subprotocol = ALLOWED_PROTOCOLS.get(subprotocol_rx.await?.as_str()).unwrap();
+            let subprotocol = subprotocol_rx.await?;
 
-            let pair = BlimpGroundWebsocketStreamPair::from_stream(websocket_stream, subprotocol.to_owned());
+            let pair = BlimpGroundWebsocketStreamPair::from_stream(websocket_stream, subprotocol);
             let handler = Arc::clone(&owned_handler);
             tokio::spawn(async move {
                 handler(pair).await;

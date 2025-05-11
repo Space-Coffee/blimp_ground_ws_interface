@@ -1,6 +1,6 @@
 [package]
 name = "blimp_ground_ws_interface"
-version = "0.2.0"
+version = "1.0.0"
 edition = "2021"
 
 [dependencies]

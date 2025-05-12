@@ -83,7 +83,7 @@ async fn test_client_send_json() {
 
     let server = {
         let tx = tx.clone();
-        tokio::spawn(start_server(address_tx,move |pair| {
+        tokio::spawn(start_server(address_tx, move |pair| {
             let tx = tx.clone();
             async move {
                 let message = pair
@@ -128,22 +128,11 @@ const SERVER_MESSAGE: MessageG2V = MessageG2V::MotorSpeed { id: 0, speed: 0 };
 async fn test_server_send() {
     let (address_tx, address_rx) = oneshot::channel::<SocketAddr>();
     let server = {
-        tokio::spawn(async move {
-            let mut server = BlimpGroundWebsocketServer::new("localhost:0");
-            server.bind().await.expect("Failed address bind");
-            address_tx
-                .send(server.get_address().unwrap())
-                .expect("Did not send the address properly");
-            server
-                .run(|pair| async move {
-                    pair.send(SERVER_MESSAGE)
-                        .await
-                        .expect("Failed to send server message");
-                    pair.close().await.expect("Failed to close");
-                })
-                .await
-                .expect("Server failed");
-        })
+        tokio::spawn(start_server(address_tx, move |pair| async move {
+                pair.send(SERVER_MESSAGE).await.expect("Failed to send server message");
+                pair.close().await.expect("Failed to close");
+            }
+        ))
     };
 
     let address = address_rx.await.expect("Failed to receive target address");
@@ -167,22 +156,11 @@ async fn test_server_send() {
 async fn test_server_send_json() {
     let (address_tx, address_rx) = oneshot::channel::<SocketAddr>();
     let server = {
-        tokio::spawn(async move {
-            let mut server = BlimpGroundWebsocketServer::new("localhost:0");
-            server.bind().await.expect("Failed address bind");
-            address_tx
-                .send(server.get_address().unwrap())
-                .expect("Did not send the address properly");
-            server
-                .run(|pair| async move {
-                    pair.send(SERVER_MESSAGE)
-                        .await
-                        .expect("Failed to send server message");
-                    pair.close().await.expect("Failed to close");
-                })
-                .await
-                .expect("Server failed");
-        })
+        tokio::spawn(start_server(address_tx, move |pair| async move {
+            pair.send(SERVER_MESSAGE).await.expect("Failed to send server message");
+            pair.close().await.expect("Failed to close");
+        }
+        ))
     };
 
     let address = address_rx.await.expect("Failed to receive target address");
@@ -206,6 +184,30 @@ async fn test_server_send_json() {
 
 #[tokio::test]
 async fn test_concurrent_sends() {
+    // .run(move |pair| {
+    //     let server_recv_notify = server_recv_notify.clone();
+    //     async move {
+    //         let pair = Arc::new(pair);
+    //         let recv_task = {
+    //             let pair = pair.clone();
+    //             tokio::spawn(async move {
+    //                 for _i in 0..MSGS_COUNT {
+    //                     let msg = pair.recv::<MessageV2G>().await.unwrap();
+    //                     assert_eq!(msg, CLIENT_MESSAGE);
+    //                 }
+    //                 server_recv_notify.notify_one();
+    //             })
+    //         };
+    // 
+    //         for _i in 0..MSGS_COUNT {
+    //             pair.send(SERVER_MESSAGE)
+    //                 .await
+    //                 .expect("Failed to send server message");
+    //         }
+    // 
+    //         recv_task.await.unwrap();
+    //     }
+    // })
     const MSGS_COUNT: usize = 64;
 
     let (address_tx, address_rx) = oneshot::channel::<SocketAddr>();
@@ -214,40 +216,30 @@ async fn test_concurrent_sends() {
 
     let server = {
         let server_recv_notify = server_recv_notify.clone();
-        tokio::spawn(async move {
-            let mut server = BlimpGroundWebsocketServer::new("localhost:0");
-            server.bind().await.expect("Failed address bind");
-            address_tx
-                .send(server.get_address().unwrap())
-                .expect("Did not send the address properly");
-            server
-                .run(move |pair| {
-                    let server_recv_notify = server_recv_notify.clone();
-                    async move {
-                        let pair = Arc::new(pair);
-                        let recv_task = {
-                            let pair = pair.clone();
-                            tokio::spawn(async move {
-                                for _i in 0..MSGS_COUNT {
-                                    let msg = pair.recv::<MessageV2G>().await.unwrap();
-                                    assert_eq!(msg, CLIENT_MESSAGE);
-                                }
-                                server_recv_notify.notify_one();
-                            })
-                        };
-
+        tokio::spawn(start_server(address_tx, move |pair| {
+            let server_recv_notify = server_recv_notify.clone();
+            async move {
+                let pair = Arc::new(pair);
+                let recv_task = {
+                    let pair = pair.clone();
+                    tokio::spawn(async move {
                         for _i in 0..MSGS_COUNT {
-                            pair.send(SERVER_MESSAGE)
-                                .await
-                                .expect("Failed to send server message");
+                            let msg = pair.recv::<MessageV2G>().await.unwrap();
+                            assert_eq!(msg, CLIENT_MESSAGE);
                         }
-
-                        recv_task.await.unwrap();
-                    }
-                })
-                .await
-                .expect("Server failed");
-        })
+                        server_recv_notify.notify_one();
+                    })
+                };
+        
+                for _i in 0..MSGS_COUNT {
+                    pair.send(SERVER_MESSAGE)
+                        .await
+                        .expect("Failed to send server message");
+                }
+        
+                recv_task.await.unwrap();
+            }
+        }))
     };
 
     let address = address_rx.await.expect("Failed to receive target address");

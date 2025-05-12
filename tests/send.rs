@@ -1,9 +1,25 @@
+use std::future::Future;
 use std::net::SocketAddr;
+use std::pin::Pin;
 use std::sync::Arc;
+use tokio::net::TcpStream;
 use tokio::sync::{oneshot, Mutex as TMutex, Notify};
 use tokio::time::{timeout, Duration};
 
-use blimp_ground_ws_interface::{BlimpGroundWebsocketClient, BlimpGroundWebsocketServer, BlimpSubprotocol, BlimpSubprotocolFlavour, MessageG2V, MessageV2G, VizInterest};
+use blimp_ground_ws_interface::{BlimpGroundWebsocketClient, BlimpGroundWebsocketServer, BlimpGroundWebsocketStreamPair, BlimpSubprotocol, BlimpSubprotocolFlavour, MessageG2V, MessageV2G, VizInterest};
+
+async fn start_server<F, Fut>(address_tx: oneshot::Sender<SocketAddr>, handler: F)
+where
+    F: Fn(BlimpGroundWebsocketStreamPair<TcpStream>) -> Fut + Send + Sync + 'static,
+    Fut: Future<Output = ()> + Send + 'static,
+{
+    let mut server = BlimpGroundWebsocketServer::new("localhost:0");
+    server.bind().await.expect("Failed address bind");
+    address_tx
+        .send(server.get_address().unwrap())
+        .expect("Did not send the address properly");
+    server.run(handler).await.expect("Server failed");
+}
 
 const CLIENT_MESSAGE: MessageV2G = MessageV2G::DeclareInterest(VizInterest {
     motors: true,
@@ -19,31 +35,21 @@ async fn test_client_send() {
 
     let server = {
         let tx = tx.clone();
-        tokio::spawn(async move {
-            let mut server = BlimpGroundWebsocketServer::new("localhost:0");
-            server.bind().await.expect("Failed address bind");
-            address_tx
-                .send(server.get_address().unwrap())
-                .expect("Did not send the address properly");
-            server
-                .run(move |pair| {
-                    let tx = tx.clone();
-                    async move {
-                        let message = pair
-                            .recv::<MessageV2G>()
-                            .await
-                            .expect("Failed to receive client message");
-                        tx.lock()
-                            .await
-                            .take()
-                            .expect("Tx already taken")
-                            .send(message)
-                            .expect("Failed to send");
-                    }
-                })
-                .await
-                .expect("Server failed");
-        })
+        tokio::spawn(start_server(address_tx,move |pair| {
+            let tx = tx.clone();
+            async move {
+                let message = pair
+                    .recv::<MessageV2G>()
+                    .await
+                    .expect("Failed to receive client message");
+                tx.lock()
+                    .await
+                    .take()
+                    .expect("Tx already taken")
+                    .send(message)
+                    .expect("Failed to send");
+            }}
+        ))
     };
 
     let address = address_rx.await.expect("Failed to receive target address");
@@ -77,31 +83,21 @@ async fn test_client_send_json() {
 
     let server = {
         let tx = tx.clone();
-        tokio::spawn(async move {
-            let mut server = BlimpGroundWebsocketServer::new("localhost:0");
-            server.bind().await.expect("Failed address bind");
-            address_tx
-                .send(server.get_address().unwrap())
-                .expect("Did not send the address properly");
-            server
-                .run(move |pair| {
-                    let tx = tx.clone();
-                    async move {
-                        let message = pair
-                            .recv::<MessageV2G>()
-                            .await
-                            .expect("Failed to receive client message");
-                        tx.lock()
-                            .await
-                            .take()
-                            .expect("Tx already taken")
-                            .send(message)
-                            .expect("Failed to send");
-                    }
-                })
-                .await
-                .expect("Server failed");
-        })
+        tokio::spawn(start_server(address_tx,move |pair| {
+            let tx = tx.clone();
+            async move {
+                let message = pair
+                    .recv::<MessageV2G>()
+                    .await
+                    .expect("Failed to receive client message");
+                tx.lock()
+                    .await
+                    .take()
+                    .expect("Tx already taken")
+                    .send(message)
+                    .expect("Failed to send");
+            }}
+        ))
     };
 
     let address = address_rx.await.expect("Failed to receive target address");

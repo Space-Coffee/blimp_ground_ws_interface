@@ -20,10 +20,9 @@ where
         .expect("Did not send the address properly");
     server.run(handler).await.expect("Server failed");
 }
-async fn run_client<F, Fut>(address_rx: oneshot::Receiver<SocketAddr>, handler: F)
+async fn run_client<F>(address_rx: oneshot::Receiver<SocketAddr>, handler: F)
 where
-    F: Fn(&BlimpGroundWebsocketClient) -> Fut + Send + Sync,
-    Fut: Future<Output = ()> + Send,
+    for <'a> F: FnOnce(&'a BlimpGroundWebsocketClient) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> + Send + Sync,
 {
     let address = address_rx.await.expect("Failed to receive target address");
     let mut client = BlimpGroundWebsocketClient::new(format!("ws://{}", address).as_str());
@@ -65,26 +64,21 @@ async fn test_client_send() {
         ))
     };
 
-    let address = address_rx.await.expect("Failed to receive target address");
-    let mut client = BlimpGroundWebsocketClient::new(format!("ws://{}", address).as_str());
+    run_client(address_rx, move |client: &BlimpGroundWebsocketClient| {Box::pin(async move {
+        client
+            .send(CLIENT_MESSAGE)
+            .await
+            .expect("Failed to send the client message");
 
-    client
-        .connect()
-        .await
-        .expect("Failed to connect the client");
-    client
-        .send(CLIENT_MESSAGE)
-        .await
-        .expect("Failed to send the client message");
+        let received = timeout(Duration::from_secs(1), rx)
+            .await
+            .expect("Timed out waiting for client message")
+            .expect("Receive failed");
 
-    let received = timeout(Duration::from_secs(1), rx)
-        .await
-        .expect("Timed out waiting for client message")
-        .expect("Receive failed");
+        assert_eq!(CLIENT_MESSAGE, received);
 
-    assert_eq!(CLIENT_MESSAGE, received);
-
-    server.abort();
+        server.abort();
+    })}).await;
 }
 
 #[tokio::test]

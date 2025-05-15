@@ -20,12 +20,13 @@ where
         .expect("Did not send the address properly");
     server.run(handler).await.expect("Server failed");
 }
-async fn run_client<F>(address_rx: oneshot::Receiver<SocketAddr>, handler: F)
+async fn run_client<F>(address_rx: oneshot::Receiver<SocketAddr>, flavour: BlimpSubprotocolFlavour, handler: F)
 where
     for <'a> F: FnOnce(&'a BlimpGroundWebsocketClient) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> + Send + Sync,
 {
     let address = address_rx.await.expect("Failed to receive target address");
     let mut client = BlimpGroundWebsocketClient::new(format!("ws://{}", address).as_str());
+    client.subprotocol = BlimpSubprotocol{version: 1, flavour};
     client.connect().await.expect("Failed to connect the client");
 
     handler(&client).await;
@@ -64,7 +65,7 @@ async fn test_client_send() {
         ))
     };
 
-    run_client(address_rx, move |client: &BlimpGroundWebsocketClient| {Box::pin(async move {
+    run_client(address_rx, BlimpSubprotocolFlavour::Postcard, |client: &BlimpGroundWebsocketClient| {Box::pin(async move {
         client
             .send(CLIENT_MESSAGE)
             .await
@@ -74,11 +75,10 @@ async fn test_client_send() {
             .await
             .expect("Timed out waiting for client message")
             .expect("Receive failed");
-
         assert_eq!(CLIENT_MESSAGE, received);
-
-        server.abort();
     })}).await;
+
+    server.abort();
 }
 
 #[tokio::test]
@@ -106,28 +106,21 @@ async fn test_client_send_json() {
             }}
         ))
     };
+    
+    run_client(address_rx, BlimpSubprotocolFlavour::Json, |client: &BlimpGroundWebsocketClient| {Box::pin(async move {
+        client
+            .send(CLIENT_MESSAGE)
+            .await
+            .expect("Failed to send the client message");
 
-    let address = address_rx.await.expect("Failed to receive target address");
-    let mut client = BlimpGroundWebsocketClient::new(format!("ws://{}", address).as_str());
-    client.subprotocol = BlimpSubprotocol{version: 1, flavour: BlimpSubprotocolFlavour::Json};
-
-    client
-        .connect()
-        .await
-        .expect("Failed to connect the client");
-    client
-        .send(CLIENT_MESSAGE)
-        .await
-        .expect("Failed to send the client message");
-
-    let received = timeout(Duration::from_secs(1), rx)
-        .await
-        .expect("Timed out waiting for client message")
-        .expect("Receive failed");
+        let received = timeout(Duration::from_secs(1), rx)
+            .await
+            .expect("Timed out waiting for client message")
+            .expect("Receive failed");
+        assert_eq!(CLIENT_MESSAGE, received);
+    })}).await;
 
     server.abort();
-
-    assert_eq!(CLIENT_MESSAGE, received);
 }
 
 const SERVER_MESSAGE: MessageG2V = MessageG2V::MotorSpeed { id: 0, speed: 0 };
@@ -142,22 +135,15 @@ async fn test_server_send() {
         ))
     };
 
-    let address = address_rx.await.expect("Failed to receive target address");
-    let mut client = BlimpGroundWebsocketClient::new(format!("ws://{}", address).as_str());
-
-    client
-        .connect()
-        .await
-        .expect("Failed to connect the client");
-
-    let received = timeout(Duration::from_secs(1), client.recv())
-        .await
-        .expect("Timed out waiting for client message")
-        .expect("Receive failed");
+    run_client(address_rx, BlimpSubprotocolFlavour::Postcard, |client: &BlimpGroundWebsocketClient| {Box::pin(async move {
+        let received = timeout(Duration::from_secs(1), client.recv())
+            .await
+            .expect("Timed out waiting for client message")
+            .expect("Receive failed");
+            assert_eq!(SERVER_MESSAGE, received);
+    })}).await;
 
     server.abort();
-
-    assert_eq!(SERVER_MESSAGE, received);
 }
 #[tokio::test]
 async fn test_server_send_json() {
@@ -170,23 +156,15 @@ async fn test_server_send_json() {
         ))
     };
 
-    let address = address_rx.await.expect("Failed to receive target address");
-    let mut client = BlimpGroundWebsocketClient::new(format!("ws://{}", address).as_str());
-    client.subprotocol = BlimpSubprotocol{version: 1, flavour: BlimpSubprotocolFlavour::Json};
-
-    client
-        .connect()
-        .await
-        .expect("Failed to connect the client");
-
-    let received = timeout(Duration::from_secs(1), client.recv())
-        .await
-        .expect("Timed out waiting for client message")
-        .expect("Receive failed");
+    run_client(address_rx, BlimpSubprotocolFlavour::Json, |client: &BlimpGroundWebsocketClient| {Box::pin(async move {
+        let received = timeout(Duration::from_secs(1), client.recv())
+            .await
+            .expect("Timed out waiting for client message")
+            .expect("Receive failed");
+            assert_eq!(SERVER_MESSAGE, received);
+    })}).await;
 
     server.abort();
-
-    assert_eq!(SERVER_MESSAGE, received);
 }
 
 #[tokio::test]

@@ -37,3 +37,4 @@ impl VizInterest {
 
 /// Reexport Controls from blimp_onboard_software
 pub use blimp_onboard_software::obsw_algo::Controls;
+pub use blimp_onboard_software::obsw_algo::FlightMode;

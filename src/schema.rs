@@ -8,6 +8,7 @@ pub enum MessageG2V {
     MotorSpeed { id: u8, speed: f32 },
     ServoPosition { id: u8, angle: f32 },
     SensorData { id: String, data: f64 },
+    State(BlimpState),
 }
 
 /// Messages sent by the client
@@ -23,6 +24,7 @@ pub struct VizInterest {
     pub motors: bool,
     pub servos: bool,
     pub sensors: bool,
+    pub state: bool,
 }
 
 impl VizInterest {
@@ -31,10 +33,10 @@ impl VizInterest {
             motors: false,
             servos: false,
             sensors: false,
+            state: false,
         }
     }
 }
 
-/// Reexport Controls from blimp_onboard_software
-pub use blimp_onboard_software::obsw_algo::Controls;
-pub use blimp_onboard_software::obsw_algo::FlightMode;
+/// Reexport some types from blimp_onboard_software
+pub use blimp_onboard_software::obsw_algo::{BlimpState, Controls, FlightMode};

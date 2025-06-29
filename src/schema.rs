@@ -15,7 +15,7 @@ pub enum MessageG2V {
 #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Clone)]
 pub enum MessageV2G {
     DeclareInterest(VizInterest),
-    Controls(Controls),
+    Controls(blimp_onboard_software::obsw_algo::Controls),
 }
 
 /// Values subscribed by the visualization software

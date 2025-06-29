@@ -5,24 +5,26 @@ pub const PROTOCOL_VERSION: u16 = 1;
 /// Messages sent by the server
 #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Clone)]
 pub enum MessageG2V {
-    MotorSpeed { id: u8, speed: i32 },
-    ServoPosition { id: u8, angle: i16 },
+    MotorSpeed { id: u8, speed: f32 },
+    ServoPosition { id: u8, angle: f32 },
     SensorData { id: String, data: f64 },
+    State(BlimpState),
 }
 
 /// Messages sent by the client
-#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Copy, Clone)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Clone)]
 pub enum MessageV2G {
     DeclareInterest(VizInterest),
-    Controls(Controls),
+    Controls(blimp_onboard_software::obsw_algo::Controls),
 }
 
 /// Values subscribed by the visualization software
-#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Copy, Clone)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Clone)]
 pub struct VizInterest {
     pub motors: bool,
     pub servos: bool,
     pub sensors: bool,
+    pub state: bool,
 }
 
 impl VizInterest {
@@ -31,14 +33,10 @@ impl VizInterest {
             motors: false,
             servos: false,
             sensors: false,
+            state: false,
         }
     }
 }
 
-/// Values for controlling the blimp
-#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Copy, Clone)]
-pub struct Controls {
-    pub throttle: i32,
-    pub elevation: i32,
-    pub yaw: i32,
-}
+/// Reexport some types from blimp_onboard_software
+pub use blimp_onboard_software::obsw_algo::{BlimpState, Controls, FlightMode};

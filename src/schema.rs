@@ -16,6 +16,7 @@ pub enum MessageG2V {
 pub enum MessageV2G {
     DeclareInterest(VizInterest),
     Controls(blimp_onboard_software::obsw_algo::Controls),
+    CycleCamera,
 }
 
 /// Values subscribed by the visualization software

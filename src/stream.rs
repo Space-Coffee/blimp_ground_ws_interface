@@ -1,4 +1,4 @@
-use crate::subprotocol::{BlimpSubprotocol, BlimpSubprotocolFlavour};
+use crate::subprotocol::BlimpSubprotocol;
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use serde::de::DeserializeOwned;

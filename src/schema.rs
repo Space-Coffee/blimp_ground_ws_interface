@@ -15,7 +15,7 @@ pub enum MessageG2V {
 #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Clone)]
 pub enum MessageV2G {
     DeclareInterest(VizInterest),
-    Controls(blimp_onboard_software::obsw_algo::Controls),
+    Controls(Controls),
     CycleCamera,
 }
 
@@ -40,4 +40,35 @@ impl VizInterest {
 }
 
 /// Reexport some types from blimp_onboard_software
-pub use blimp_onboard_software::obsw_algo::{BlimpState, Controls, FlightMode};
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+pub enum FlightMode {
+    Manual,   // Throttle -> motors speed; Pitch -> motors pitch; Roll -> motors yaw
+    Atti,     // Stabilize heading, control thrust vector
+    AltiAtti, // Like Atti, but also stabilize altitude
+}
+
+#[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct BlimpState {
+    flight_mode: FlightMode,
+    altitude: f64,
+    desired_altitude: Option<f64>,
+    heading: f64,
+    desired_heading: Option<f64>,
+    pitch: f64,
+    roll: f64,
+}
+
+#[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct Controls {
+    pub throttle_main: f32,       // Generally influences speed
+    pub throttle_split: [f32; 4], // Allows you to steer motors individually
+    pub sideways: f32,            // Left/right linear movement
+    pub elevation: f32,           // Up-down motion
+    pub pitch: f32,               // Rotate forward-backward
+    pub roll: f32,                // Roll left/right
+    pub yaw: f32,                 // Rotate left/right - change heading
+    pub desired_flight_mode: FlightMode,
+    pub motors_toggles: [bool; 4],
+    pub motors_reverse: [bool; 4],
+    pub nav_lights: bool,
+}

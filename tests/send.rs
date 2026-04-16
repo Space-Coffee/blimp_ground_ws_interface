@@ -52,6 +52,7 @@ async fn run_client<F>(
 }
 
 const CLIENT_MESSAGE: MessageV2G = MessageV2G::DeclareInterest(VizInterest {
+    state: true,
     motors: true,
     servos: true,
     sensors: true,
@@ -222,7 +223,7 @@ async fn test_concurrent_sends() {
     let server_recv_notify = Arc::new(Notify::new());
     let client_recv_notify = Arc::new(Notify::new());
 
-    let server = {
+    let _server = {
         let server_recv_notify = server_recv_notify.clone();
         tokio::spawn(run_server(address_tx, move |pair| {
             let server_recv_notify = server_recv_notify.clone();
